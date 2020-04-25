@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  BotsMacrosExecutionRoles:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+                - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:*'
+                Resource: 'arn:aws:logs:*:*:*'
+        - 
+                    PolicyName: DescribeImages
+                    PolicyDocument:
+                        Version: '2012-10-17'
+                        Statement:
+                            - 
+                                Action: 'ec2:DescribeImages'
+                                Effect: Allow
+                                Resource: '*'
+  BotsInstanceRatioFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ZipFile: |
+          import traceback
+          import math
+          def handler(event, context):
+              response = {
+                  "requestId": event["requestId"],
+                  "status": "success"
+              }
+              try:
+                  def round_up(n, decimals=0):
+                      multiplier = 10 ** decimals
+                      return math.ceil(n * multiplier) / multiplier
+                  apptype = event["params"]["AppName"]
+                  input = event["params"]["InputString"]
+                  if apptype == "ES":
+                      response["fragment"] = int(round_up(int(input)/5))
+                  elif apptype == "UBA":
+                      response["fragment"] = int(round_up(int(input)/10))
+                  elif apptype == "Phantom":
+                      response["fragment"] = int(round_up(int(input)/5))
+                  else:
+                      response["status"] = "failure"
+              except Exception as e:
+                  traceback.print_exc()
+                  response["status"] = "failure"
+                  response["errorMessage"] = str(e)
+              return response
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt BotsMacrosExecutionRoles.Arn
+  BotsInstanceRatioFunctionPermissions:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt 
+        - BotsInstanceRatioFunction
+        - Arn
+      Principal: cloudformation.amazonaws.com
+  BotsInstanceRatio:
+    Type: 'AWS::CloudFormation::Macro'
+    Properties:
+      Name: getworkshopratios
+      Description: Provides various string processing functions
+      FunctionName: !GetAtt 
+        - BotsInstanceRatioFunction
+        - Arn
+  ResourceExpandMacroFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ZipFile: |
+          import copy
+          import json
+
+          def process_template(template):
+              new_template = copy.deepcopy(template)
+              status = 'success'
+
+              for name, resource in template['Resources'].items():
+                  if 'Count' in resource:
+                      print(resource)
+                      #Get the number of times to multiply the resource
+                      count = new_template['Resources'][name].pop('Count')
+                      print("Found 'Count' property with value {} in '{}' resource....multiplying!".format(count,name))            
+                      #Remove the original resource from the template but take a local copy of it
+                      resourceToMultiply = new_template['Resources'].pop(name)
+                      #Create a new block of the resource multiplied with names ending in the iterator and the placeholders substituted
+                      resourcesAfterMultiplication = multiply(name, resourceToMultiply, count)
+                      if not set(resourcesAfterMultiplication.keys()) & set(new_template['Resources'].keys()):
+                          new_template['Resources'].update(resourcesAfterMultiplication)
+                      else:
+                          status = 'failed'
+                          return status, template
+                  else:
+                      print("Did not find 'Count' property in '{}' resource....Nothing to do!".format(name))
+              return status, new_template
+
+          def update_placeholder(resource_structure, iteration):
+              #Convert the json into a string
+              resourceString = json.dumps(resource_structure)
+              #Count the number of times the placeholder is found in the string
+              placeHolderCount = resourceString.count('%s')
+
+              #If the placeholder is found then replace it
+              if placeHolderCount > 0:
+                  print("Found {} occurrences of decimal placeholder in JSON, replacing with iterator value {}".format(placeHolderCount, iteration))
+                  #Make a list of the values that we will use to replace the decimal placeholders - the values will all be the same
+                  placeHolderReplacementValues = ['{0:03d}'.format(iteration)] * placeHolderCount
+                  #Replace the decimal placeholders using the list - the syntax below expands the list
+                  resourceString = resourceString % (*placeHolderReplacementValues,)
+                  #Convert the string back to json and return it
+                  return json.loads(resourceString)
+              else:
+                  print("No occurences of decimal placeholder found in JSON, therefore nothing will be replaced")
+                  return resource_structure
+
+          def multiply(resource_name, resource_structure, count):
+              resources = {}
+              #Loop according to the number of times we want to multiply, creating a new resource each time
+              for iteration in range(1, (count + 1)):
+                  print("Multiplying '{}', iteration count {}".format(resource_name,iteration))        
+                  multipliedResourceStructure = update_placeholder(resource_structure,iteration)
+                  resources[resource_name+str(iteration).zfill(3)] = multipliedResourceStructure
+              return resources
+
+
+          def handler(event, context):
+              result = process_template(event['fragment'])
+              return {
+                  'requestId': event['requestId'],
+                  'status': result[0],
+                  'fragment': result[1],
+              }
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt BotsMacrosExecutionRoles.Arn
+  ResourceExpandMacroFunctionPermissions:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt 
+        - ResourceExpandMacroFunction
+        - Arn
+      Principal: cloudformation.amazonaws.com
+  ResourceExpandMacro:
+    Type: 'AWS::CloudFormation::Macro'
+    Properties:
+      Name: resourceexpand
+      Description: Provides ability to deploy multiple instances of same type
+      FunctionName: !GetAtt 
+        - ResourceExpandMacroFunction
+        - Arn
+  GetLatestAMIMacroFunction:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+            Runtime: python3.6
+            Handler: index.handler
+            Role: !GetAtt BotsMacrosExecutionRoles.Arn
+            Timeout: 60
+            Code:
+                ZipFile: |
+                    import boto3
+                    import cfnresponse
+                    import json
+                    import traceback
+
+                    def handler(event, context):
+                      try:
+                        response = {
+                            "requestId": event["requestId"],
+                            "status": "success"
+                        }
+                        amilist = boto3.client('ec2').describe_images(
+                            Owners=[event['params']['Owner']],
+                            Filters=[
+                              {'Name': 'name', 'Values': [event['params']['Name']]},
+                              {'Name': 'architecture', 'Values': [event['params']['Architecture']]},
+                              {'Name': 'root-device-type', 'Values': ['ebs']},
+                            ],
+                        )
+                        amis = sorted(amilist['Images'],
+                                      key=lambda x: x['CreationDate'],
+                                      reverse=True)
+                        id = amis[0]['ImageId']
+                        return {
+                          'requestId': event['requestId'],
+                          'status': "success",
+                          'fragment': id,
+                        }
+                      except:
+                        return {
+                          'requestId': event['requestId'],
+                          'status': "fail",
+                          'fragment': traceback.print_last()
+                        }
+  GetLatestAMIFunctionPermissions:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt 
+        - GetLatestAMIMacroFunction
+        - Arn
+      Principal: cloudformation.amazonaws.com
+  GetLatestAMIMacro:
+    Type: 'AWS::CloudFormation::Macro'
+    Properties:
+      Name: getlatestami
+      Description: Provides ability to deploy multiple instances of same type
+      FunctionName: !GetAtt 
+        - GetLatestAMIMacroFunction
+        - Arn
