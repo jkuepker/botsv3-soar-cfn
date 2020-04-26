@@ -5,13 +5,7 @@ Resources:
     Properties:
       Comment: DNS A record for the Phantom instance
       HostedZoneName: !Sub '${HostedZone}.'
-      Name: !Join 
-        - ''
-        - - phantom-
-          - !Ref EventID
-          - .
-          - !Ref HostedZone
-          - .
+      Name: !Sub 'phantom-${EventID}.${HostedZone}.'
       ResourceRecords:
         - !GetAtt 'SplunkPhantom.PublicIp'
       TTL: '60'
@@ -23,17 +17,8 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       Comment: DNS A record for the Core instance
-      HostedZoneName: !Join 
-        - ''
-        - - !Ref HostedZone
-          - .
-      Name: !Join 
-        - ''
-        - - splunk-
-          - !Ref EventID
-          - .
-          - !Ref HostedZone
-          - .
+      HostedZoneName: !Sub '${HostedZone}.'
+      Name: !Sub 'splunk-${EventID}.${HostedZone}.'
       ResourceRecords:
         - !GetAtt 'SplunkCore.PublicIp'
       TTL: '60'
@@ -522,134 +507,15 @@ Conditions:
     - !Equals
       - ''
       - !Ref 'VirusTotalKey'
-Mappings:
-  AWSInstanceType2Arch:
-    t1.micro:
-      Arch: HVM64
-    t2.nano:
-      Arch: HVM64
-    t2.micro:
-      Arch: HVM64
-    t2.small:
-      Arch: HVM64
-    t2.medium:
-      Arch: HVM64
-    t2.large:
-      Arch: HVM64
-    m1.small:
-      Arch: HVM64
-    m1.medium:
-      Arch: HVM64
-    m1.large:
-      Arch: HVM64
-    m1.xlarge:
-      Arch: HVM64
-    m2.xlarge:
-      Arch: HVM64
-    m2.2xlarge:
-      Arch: HVM64
-    m2.4xlarge:
-      Arch: HVM64
-    m3.medium:
-      Arch: HVM64
-    m3.large:
-      Arch: HVM64
-    m3.xlarge:
-      Arch: HVM64
-    m3.2xlarge:
-      Arch: HVM64
-    m4.large:
-      Arch: HVM64
-    m4.xlarge:
-      Arch: HVM64
-    m4.2xlarge:
-      Arch: HVM64
-    m4.4xlarge:
-      Arch: HVM64
-    m4.10xlarge:
-      Arch: HVM64
-    c1.medium:
-      Arch: HVM64
-    c1.xlarge:
-      Arch: HVM64
-    c3.large:
-      Arch: HVM64
-    c3.xlarge:
-      Arch: HVM64
-    c3.2xlarge:
-      Arch: HVM64
-    c3.4xlarge:
-      Arch: HVM64
-    c3.8xlarge:
-      Arch: HVM64
-    c4.large:
-      Arch: HVM64
-    c4.xlarge:
-      Arch: HVM64
-    c4.2xlarge:
-      Arch: HVM64
-    c4.4xlarge:
-      Arch: HVM64
-    c4.8xlarge:
-      Arch: HVM64
-    g2.2xlarge:
-      Arch: HVMG2
-    g2.8xlarge:
-      Arch: HVMG2
-    r3.large:
-      Arch: HVM64
-    r3.xlarge:
-      Arch: HVM64
-    r3.2xlarge:
-      Arch: HVM64
-    r3.4xlarge:
-      Arch: HVM64
-    r3.8xlarge:
-      Arch: HVM64
-    i2.xlarge:
-      Arch: HVM64
-    i2.2xlarge:
-      Arch: HVM64
-    i2.4xlarge:
-      Arch: HVM64
-    i2.8xlarge:
-      Arch: HVM64
-    d2.xlarge:
-      Arch: HVM64
-    d2.2xlarge:
-      Arch: HVM64
-    d2.4xlarge:
-      Arch: HVM64
-    d2.8xlarge:
-      Arch: HVM64
-    hi1.4xlarge:
-      Arch: HVM64
-    hs1.8xlarge:
-      Arch: HVM64
-    cr1.8xlarge:
-      Arch: HVM64
-    cc2.8xlarge:
-      Arch: HVM64
 Outputs:
   SplunkCoreURL:
-    Value: !Join 
-      - ''
-      - - splunk-
-        - !Ref EventID
-        - .
-        - !Ref HostedZone
-        - ':8000'
+    Value: !Sub 'splunk-${EventID}.${HostedZone}.'
     Description: Newly created Splunk Core Private IP
   SplunkCorePrivateIP:
     Value: !GetAtt 'SplunkCore.PrivateIp'
     Description: Newly created Splunk Core Private IP
   SplunkPhantomURL:
-    Value: !Join 
-      - ''
-      - - phantom-
-        - !Ref EventID
-        - .
-        - !Ref HostedZone
+    Value: !Sub 'phantom-${EventID}.${HostedZone}.'
     Description: Newly created Splunk Phantom URL
   SplunkPhantomPrivateIP:
     Value: !GetAtt 'SplunkPhantom.PrivateIp'
