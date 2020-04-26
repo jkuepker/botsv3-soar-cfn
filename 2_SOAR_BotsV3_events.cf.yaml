@@ -258,6 +258,10 @@ Resources:
             - !Ref PhantomInstanceName
             - |
               "\" >> /tmp/env.txt
+              echo NUMC=\""
+            - !Ref PhantomNumContainers
+            - |
+              "\" >> /tmp/env.txt
             - >
               curl
               https://webaccessible-jkuepker.s3.amazonaws.com/phantom-config-events.sh
@@ -349,6 +353,11 @@ Parameters:
     Description: Name of your Phantom Instance in the Title Bar
     Type: String
     Default: Splunk SOAR
+  PhantomNumContainers:
+    Description: Number of Phantom containers to generate.
+    Type: Number
+    MaxValue: 100
+    Default: 5
   EventID:
     AllowedPattern: '([a-zA-Z0-9]{1,6})'
     ConstraintDescription: Must be lowercase string between one and six characters in length.

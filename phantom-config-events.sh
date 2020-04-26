@@ -29,7 +29,7 @@ curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')"
 echo "TEST - Disabling Initial Onboarding"
 curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/user_settings" -H 'Content-Type: application/json' -d '{ "redirect_onboarding": false, "show_onboarding": false }'
 echo "Generating Events and Artifacts"
-curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/asset/7" -H 'Content-Type: application/json' -d '{"ingest_now":true,"container_source_ids":"","max_containers":5,"max_artifacts":3}'
+curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/asset/7" -H 'Content-Type: application/json' -d "{\"ingest_now\":true,\"container_source_ids\":\"\",\"max_containers\":${NUMC},\"max_artifacts\":3}"
 echo "TEST - Disabling EULA, adding Company Name, changing Instance Name, configuring FQDN"
 psql -d phantom -c "UPDATE system_settings SET administrator_contact = 'newadmin@localhost', company_name = 'Splunk', system_name = '${INAME}', eula_accepted = true, fqdn = '$(curl -s http://instance-data/latest/meta-data/network/interfaces/macs/$(curl -s http://instance-data/latest/meta-data/network/interfaces/macs)local-ipv4s)' WHERE system_settings.id = 1;"
 echo "Install Completed"
