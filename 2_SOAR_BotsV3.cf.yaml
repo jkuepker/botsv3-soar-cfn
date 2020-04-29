@@ -1,72 +1,50 @@
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
   PhantomARecord:
-    Type: 'AWS::Route53::RecordSet'
+    Type: AWS::Route53::RecordSet
     Properties:
       Comment: DNS A record for the Phantom instance
-      HostedZoneName: !Join 
-        - ''
-        - - !Ref HostedZone
-          - .
-      Name: !Join 
-        - ''
-        - - phantom-
-          - !Ref EventID
-          - .
-          - !Ref HostedZone
-          - .
+      HostedZoneName: !Sub '${HostedZone}.'
+      Name: !Sub 'phantom-${EventID}.${HostedZone}.'
       ResourceRecords:
-        - !GetAtt 
-          - SplunkPhantom
-          - PublicIp
+        - !GetAtt 'SplunkPhantom.PublicIp'
       TTL: '60'
       Type: A
     Metadata:
-      'AWS::CloudFormation::Designer':
+      AWS::CloudFormation::Designer:
         id: f37749a1-d29e-4de3-aa7c-520f7e1507c1
   CoreARecord:
-    Type: 'AWS::Route53::RecordSet'
+    Type: AWS::Route53::RecordSet
     Properties:
       Comment: DNS A record for the Core instance
-      HostedZoneName: !Join 
-        - ''
-        - - !Ref HostedZone
-          - .
-      Name: !Join 
-        - ''
-        - - splunk-
-          - !Ref EventID
-          - .
-          - !Ref HostedZone
-          - .
+      HostedZoneName: !Sub '${HostedZone}.'
+      Name: !Sub 'splunk-${EventID}.${HostedZone}.'
       ResourceRecords:
-        - !GetAtt 
-          - SplunkCore
-          - PublicIp
+        - !GetAtt 'SplunkCore.PublicIp'
       TTL: '60'
       Type: A
   VPC:
-    Type: 'AWS::EC2::VPC'
+    Type: AWS::EC2::VPC
     Properties:
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
       CidrBlock: 10.30.0.0/16
   PublicSubnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: !Ref AvailabilityZone
-      VpcId: !Ref VPC
+      AvailabilityZone: !Ref 'AvailabilityZone'
+      VpcId: !Ref 'VPC'
       CidrBlock: 10.30.0.0/24
   subnet0RTA:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet'
   SplunkCore:
-    Type: 'AWS::EC2::Instance'
+    Type: AWS::EC2::Instance
     Properties:
-      AvailabilityZone: !Ref AvailabilityZone
-      InstanceType: !Ref CoreInstanceType
+      AvailabilityZone: !Ref 'AvailabilityZone'
+      InstanceType: !Ref 'CoreInstanceType'
       ImageId:
         'Fn::Transform':
           Name: getlatestami
@@ -78,50 +56,36 @@ Resources:
                 - .*
             Architecture: x86_64
             Owner: '679593333241'
-      KeyName: !Ref KeyName
+      KeyName: !Ref 'KeyName'
       NetworkInterfaces:
         - GroupSet:
-            - !Ref CorePhantomSG
+            - !Ref 'CorePhantomSG'
           AssociatePublicIpAddress: 'true'
           DeviceIndex: '0'
           DeleteOnTermination: 'true'
-          SubnetId: !Ref PublicSubnet
-      UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - |
-              #!/bin/bash
-            - |
-              set -x
-            - |
-              exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
-            - |
-              echo BEGIN
-            - |
-              date '+%Y-%m-%d %H:%M:%S'
-            - >
-              instanceid=$(curl
-              http://169.254.169.254/latest/meta-data/instance-id)
-            - |
-              echo $instanceid > /tmp/test.txt
-            - |
-              cd /tmp
-            - >
-              wget
-              "https://webaccessible-jkuepker.s3.us-east-1.amazonaws.com/splunk-soar-botsv3.sh"
-            - |
-              chmod +x /tmp/splunk-soar-botsv3.sh
-            - /tmp/splunk-soar-botsv3.sh &
+          SubnetId: !Ref 'PublicSubnet'
+      UserData: !Base64 |-
+        #!/bin/bash
+        set -x
+        exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
+        echo BEGIN
+        date '+%Y-%m-%d %H:%M:%S'
+        instanceid=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+        echo $instanceid > /tmp/test.txt
+        cd /tmp
+        wget "https://webaccessible-jkuepker.s3.us-east-1.amazonaws.com/splunk-soar-botsv3.sh"
+        chmod +x /tmp/splunk-soar-botsv3.sh
+        /tmp/splunk-soar-botsv3.sh &
     Metadata:
-      'AWS::CloudFormation::Designer':
+      AWS::CloudFormation::Designer:
         id: 62475ba4-1434-44a3-a289-7a41dc778788
     DependsOn:
       - PublicRoute
   CorePhantomSG:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      VpcId: !Ref VPC
-      GroupDescription: 'Allow access from HTTP, REST, HEC, and SSH traffic'
+      VpcId: !Ref 'VPC'
+      GroupDescription: Allow access from HTTP, REST, HEC, and SSH traffic
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '80'
@@ -146,47 +110,47 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: !Ref SSHLocation
+          CidrIp: !Ref 'SSHLocation'
     Metadata:
-      'AWS::CloudFormation::Designer':
+      AWS::CloudFormation::Designer:
         id: d7c8abaf-0ae1-463d-b733-96e8d876e526
   CorePhantomIG:
-    Type: 'AWS::EC2::InternetGateway'
+    Type: AWS::EC2::InternetGateway
     Properties: {}
     Metadata:
-      'AWS::CloudFormation::Designer':
+      AWS::CloudFormation::Designer:
         id: faef2b3e-8e2c-4e1d-ac33-2f2392075b9c
   VPCAttachment:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref CorePhantomIG
+      VpcId: !Ref 'VPC'
+      InternetGatewayId: !Ref 'CorePhantomIG'
     Metadata:
-      'AWS::CloudFormation::Designer':
+      AWS::CloudFormation::Designer:
         id: 768d4d7a-7397-43f9-b716-6f7402cd88c2
   PublicRouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
     Metadata:
-      'AWS::CloudFormation::Designer':
+      AWS::CloudFormation::Designer:
         id: c24f5bc9-e419-4e30-bb7f-e92f1a2f96f7
     DependsOn:
       - PublicSubnet
   PublicRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
-      RouteTableId: !Ref PublicRouteTable
-      GatewayId: !Ref CorePhantomIG
+      RouteTableId: !Ref 'PublicRouteTable'
+      GatewayId: !Ref 'CorePhantomIG'
     DependsOn:
       - CorePhantomIG
       - VPC
   SplunkPhantom:
-    Type: 'AWS::EC2::Instance'
+    Type: AWS::EC2::Instance
     Properties:
-      AvailabilityZone: !Ref AvailabilityZone
-      InstanceType: !Ref PhantomInstanceType
+      AvailabilityZone: !Ref 'AvailabilityZone'
+      InstanceType: !Ref 'PhantomInstanceType'
       ImageId:
         'Fn::Transform':
           Name: getlatestami
@@ -198,75 +162,41 @@ Resources:
                 - '*'
             Architecture: x86_64
             Owner: '679593333241'
-      KeyName: !Ref KeyName
+      KeyName: !Ref 'KeyName'
       NetworkInterfaces:
         - GroupSet:
-            - !Ref CorePhantomSG
+            - !Ref 'CorePhantomSG'
           AssociatePublicIpAddress: 'true'
           DeviceIndex: '0'
           DeleteOnTermination: 'true'
-          SubnetId: !Ref PublicSubnet
-      UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - |
-              #!/bin/bash
-            - |
-              set -x
-            - |
-              exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
-            - |
-              echo BEGIN
-            - |
-              date '+%Y-%m-%d %H:%M:%S'
-            - 'echo '
-            - !GetAtt 
-              - SplunkCore
-              - PrivateIp
-            - |2
-               > /tmp/test.txt
-            - |
-              mkdir ~/.aws/
-            - 'printf "[default]\naws_access_key_id='
-            - !Ref MyAccessKey
-            - \naws_secret_access_key=
-            - !GetAtt 
-              - MyAccessKey
-              - SecretAccessKey
-            - |
-              \n" > ~/.aws/credentials
-            - |
-              printf "[default]\nregion=us-east-1\noutput=json" > ~/.aws/config
-            - |
-              mkdir /home/centos/.aws/
-            - |
-              cp ~/.aws/* /home/centos/.aws/
-            - |
-              chown -R centos:centos /home/centos/.aws/
-            - echo "
-            - !Ref MySecret
-            - |
-              " > /tmp/creds2.txt
-            - echo VT_KEY=\""
-            - !If 
+          SubnetId: !Ref 'PublicSubnet'
+      UserData: !Base64
+        Fn::Sub:
+          - |-
+            #!/bin/bash
+            set -x
+            exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
+            echo BEGIN
+            date '+%Y-%m-%d %H:%M:%S'
+            echo ${SplunkCore.PrivateIp} > /tmp/test.txt
+            mkdir ~/.aws/
+            printf "[default]\naws_access_key_id=${MyAccessKey}\naws_secret_access_key=${MyAccessKey.SecretAccessKey}\n" > ~/.aws/credentials
+            printf "[default]\nregion=us-east-1\noutput=json" > ~/.aws/config
+            mkdir /home/centos/.aws/
+            cp ~/.aws/* /home/centos/.aws/
+            chown -R centos:centos /home/centos/.aws/
+            echo "${MySecret}" > /tmp/creds2.txt
+            echo VT_KEY=\""${Param1}"\" >> /tmp/env.txt
+            echo INAME=\""${PhantomInstanceName}"\" >> /tmp/env.txt
+            curl https://webaccessible-jkuepker.s3.amazonaws.com/phantom-config.sh -o /tmp/phantom-config.sh
+            chmod +x /tmp/phantom-config.sh
+            /tmp/phantom-config.sh &
+          - Param1: !If
               - HasVtKey
-              - !Ref VirusTotalKey
+              - !Ref 'VirusTotalKey'
               - !Ref 'AWS::NoValue'
-            - |
-              "\" >> /tmp/env.txt
-            - echo INAME=\""
-            - !Ref PhantomInstanceName
-            - |
-              "\" >> /tmp/env.txt
-            - >
-              curl
-              https://webaccessible-jkuepker.s3.amazonaws.com/phantom-config.sh
-              -o /tmp/phantom-config.sh
-            - |
-              chmod +x /tmp/phantom-config.sh
-            - /tmp/phantom-config.sh &
     Metadata:
-      'AWS::CloudFormation::Init':
+      AWS::CloudFormation::Init:
         configSets:
           ascending:
             - config1
@@ -274,9 +204,7 @@ Resources:
         config1:
           files:
             /home/centos/corePrivateIp.txt:
-              content: !GetAtt 
-                - SplunkCore
-                - PrivateIp
+              content: !GetAtt 'SplunkCore.PrivateIp'
               mode: '000644'
               owner: phantom
         config2:
@@ -286,7 +214,7 @@ Resources:
     DependsOn:
       - PublicRoute
   MySecret:
-    Type: 'AWS::SecretsManager::Secret'
+    Type: AWS::SecretsManager::Secret
     Properties:
       Name: CorePhantomSecretForCli
       Description: This secret has a dynamically generated secret password.
@@ -299,17 +227,17 @@ Resources:
         - Key: Name
           Value: CorePhantom
   MyAccessKey:
-    Type: 'AWS::IAM::AccessKey'
+    Type: AWS::IAM::AccessKey
     Properties:
       UserName: CorePhantomUser
     DependsOn:
       - CorePhantomInitUser
   CorePhantomInitUserGroup:
-    Type: 'AWS::IAM::Group'
+    Type: AWS::IAM::Group
     Properties:
       GroupName: CorePhantomUserGroup
   CorePhantomInitUser:
-    Type: 'AWS::IAM::User'
+    Type: AWS::IAM::User
     Properties:
       Groups:
         - CorePhantomUserGroup
@@ -317,7 +245,7 @@ Resources:
     DependsOn:
       - CorePhantomInitUserGroup
   CorePhantomInitPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyName: CorePhantomUsers
       PolicyDocument:
@@ -325,14 +253,14 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - 'cloudformation:Describe*'
-              - 'cloudformation:List*'
-              - 'cloudformation:Get*'
-              - 'ec2:Describe*'
-              - 'ec2:GetConsole*'
+              - cloudformation:Describe*
+              - cloudformation:List*
+              - cloudformation:Get*
+              - ec2:Describe*
+              - ec2:GetConsole*
             Resource: '*'
       Groups:
-        - !Ref CorePhantomInitUserGroup
+        - !Ref 'CorePhantomInitUserGroup'
     DependsOn:
       - CorePhantomInitUserGroup
 Parameters:
@@ -350,8 +278,9 @@ Parameters:
     Type: String
     Default: Splunk SOAR
   EventID:
-    AllowedPattern: '([a-zA-Z0-9]{1,6})'
-    ConstraintDescription: Must be lowercase string between one and six characters in length.
+    AllowedPattern: ([a-zA-Z0-9]{1,6})
+    ConstraintDescription: Must be lowercase string between one and six characters
+      in length.
     Description: The workshop EventID(aka Short Name)
     Type: String
   HostedZone:
@@ -360,7 +289,7 @@ Parameters:
     Type: String
   AvailabilityZone:
     Description: Availability Zone
-    Type: 'AWS::EC2::AvailabilityZone::Name'
+    Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: must be a valid Splunk Core EC2 instance type.
   CoreInstanceType:
     Description: Splunk Core Instance Types
@@ -553,163 +482,41 @@ Parameters:
     ConstraintDescription: must be a valid Splunk Phantom EC2 instance type.
   KeyName:
     Description: Name of an EC2 KeyPair to enable SSH access to the instance.
-    Type: 'AWS::EC2::KeyPair::KeyName'
+    Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
   SSHLocation:
-    Description: ' The IP address range that can be used to access the web server using SSH.'
+    Description: ' The IP address range that can be used to access the web server
+      using SSH.'
     Type: String
     MinLength: '9'
     MaxLength: '18'
     Default: 0.0.0.0/0
-    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
   VirusTotalKey:
     Type: String
     Description: VirusTotal Key for auto-configuration
 Conditions:
-  HasVtKey: !Not 
-    - !Equals 
+  HasVtKey: !Not
+    - !Equals
       - ''
-      - !Ref VirusTotalKey
-Mappings:
-  AWSInstanceType2Arch:
-    t1.micro:
-      Arch: HVM64
-    t2.nano:
-      Arch: HVM64
-    t2.micro:
-      Arch: HVM64
-    t2.small:
-      Arch: HVM64
-    t2.medium:
-      Arch: HVM64
-    t2.large:
-      Arch: HVM64
-    m1.small:
-      Arch: HVM64
-    m1.medium:
-      Arch: HVM64
-    m1.large:
-      Arch: HVM64
-    m1.xlarge:
-      Arch: HVM64
-    m2.xlarge:
-      Arch: HVM64
-    m2.2xlarge:
-      Arch: HVM64
-    m2.4xlarge:
-      Arch: HVM64
-    m3.medium:
-      Arch: HVM64
-    m3.large:
-      Arch: HVM64
-    m3.xlarge:
-      Arch: HVM64
-    m3.2xlarge:
-      Arch: HVM64
-    m4.large:
-      Arch: HVM64
-    m4.xlarge:
-      Arch: HVM64
-    m4.2xlarge:
-      Arch: HVM64
-    m4.4xlarge:
-      Arch: HVM64
-    m4.10xlarge:
-      Arch: HVM64
-    c1.medium:
-      Arch: HVM64
-    c1.xlarge:
-      Arch: HVM64
-    c3.large:
-      Arch: HVM64
-    c3.xlarge:
-      Arch: HVM64
-    c3.2xlarge:
-      Arch: HVM64
-    c3.4xlarge:
-      Arch: HVM64
-    c3.8xlarge:
-      Arch: HVM64
-    c4.large:
-      Arch: HVM64
-    c4.xlarge:
-      Arch: HVM64
-    c4.2xlarge:
-      Arch: HVM64
-    c4.4xlarge:
-      Arch: HVM64
-    c4.8xlarge:
-      Arch: HVM64
-    g2.2xlarge:
-      Arch: HVMG2
-    g2.8xlarge:
-      Arch: HVMG2
-    r3.large:
-      Arch: HVM64
-    r3.xlarge:
-      Arch: HVM64
-    r3.2xlarge:
-      Arch: HVM64
-    r3.4xlarge:
-      Arch: HVM64
-    r3.8xlarge:
-      Arch: HVM64
-    i2.xlarge:
-      Arch: HVM64
-    i2.2xlarge:
-      Arch: HVM64
-    i2.4xlarge:
-      Arch: HVM64
-    i2.8xlarge:
-      Arch: HVM64
-    d2.xlarge:
-      Arch: HVM64
-    d2.2xlarge:
-      Arch: HVM64
-    d2.4xlarge:
-      Arch: HVM64
-    d2.8xlarge:
-      Arch: HVM64
-    hi1.4xlarge:
-      Arch: HVM64
-    hs1.8xlarge:
-      Arch: HVM64
-    cr1.8xlarge:
-      Arch: HVM64
-    cc2.8xlarge:
-      Arch: HVM64
+      - !Ref 'VirusTotalKey'
 Outputs:
   SplunkCoreURL:
-    Value: !Join 
-      - ''
-      - - splunk-
-        - !Ref EventID
-        - .
-        - !Ref HostedZone
-        - ':8000'
+    Value: !Sub 'splunk-${EventID}.${HostedZone}:8000'
     Description: Newly created Splunk Core Private IP
   SplunkCorePrivateIP:
-    Value: !GetAtt 
-      - SplunkCore
-      - PrivateIp
+    Value: !GetAtt 'SplunkCore.PrivateIp'
     Description: Newly created Splunk Core Private IP
   SplunkPhantomURL:
-    Value: !Join 
-      - ''
-      - - phantom-
-        - !Ref EventID
-        - .
-        - !Ref HostedZone
+    Value: !Sub 'phantom-${EventID}.${HostedZone}'
     Description: Newly created Splunk Phantom URL
   SplunkPhantomPrivateIP:
-    Value: !GetAtt 
-      - SplunkPhantom
-      - PrivateIp
+    Value: !GetAtt 'SplunkPhantom.PrivateIp'
     Description: Newly created Splunk Phantom Private IP
   SplunkPhantomID:
-    Value: !Ref SplunkPhantom
+    Value: !Ref 'SplunkPhantom'
     Description: Newly created Splunk Phantom Instance Id
   SplunkCoreID:
-    Value: !Ref SplunkCore
+    Value: !Ref 'SplunkCore'
     Description: Newly created Splunk Core Instance Id
