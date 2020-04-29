@@ -509,13 +509,13 @@ Conditions:
       - !Ref 'VirusTotalKey'
 Outputs:
   SplunkCoreURL:
-    Value: !Sub 'splunk-${EventID}.${HostedZone}.'
+    Value: !Sub 'splunk-${EventID}.${HostedZone}:8000'
     Description: Newly created Splunk Core Private IP
   SplunkCorePrivateIP:
     Value: !GetAtt 'SplunkCore.PrivateIp'
     Description: Newly created Splunk Core Private IP
   SplunkPhantomURL:
-    Value: !Sub 'phantom-${EventID}.${HostedZone}.'
+    Value: !Sub 'phantom-${EventID}.${HostedZone}'
     Description: Newly created Splunk Phantom URL
   SplunkPhantomPrivateIP:
     Value: !GetAtt 'SplunkPhantom.PrivateIp'
