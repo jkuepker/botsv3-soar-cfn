@@ -178,17 +178,17 @@ Resources:
             exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
             echo BEGIN
             date '+%Y-%m-%d %H:%M:%S'
-            echo ${SplunkCore.PrivateIp} > /tmp/test.txt
             mkdir ~/.aws/
             printf "[default]\naws_access_key_id=${MyAccessKey}\naws_secret_access_key=${MyAccessKey.SecretAccessKey}\n" > ~/.aws/credentials
             printf "[default]\nregion=us-east-1\noutput=json" > ~/.aws/config
             mkdir /home/centos/.aws/
             cp ~/.aws/* /home/centos/.aws/
             chown -R centos:centos /home/centos/.aws/
-            echo "${MySecret}" > /tmp/creds2.txt
             echo VT_KEY=\""${Param1}"\" >> /tmp/env.txt
             echo INAME=\""${PhantomInstanceName}"\" >> /tmp/env.txt
             echo NUMC=\""${PhantomNumContainers}"\" >> /tmp/env.txt
+            echo COREIP=\""${SplunkCore.PrivateIp}"\" >> /tmp/env.txt
+            echo COREID=\""${SplunkCore}"\" >> /tmp/env.txt
             curl https://webaccessible-jkuepker.s3.amazonaws.com/phantom-config-events.sh -o /tmp/phantom-config-events.sh
             chmod +x /tmp/phantom-config-events.sh
             /tmp/phantom-config-events.sh &
