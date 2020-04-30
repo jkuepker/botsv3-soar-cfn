@@ -188,6 +188,8 @@ Resources:
             echo "${MySecret}" > /tmp/creds2.txt
             echo VT_KEY=\""${Param1}"\" >> /tmp/env.txt
             echo INAME=\""${PhantomInstanceName}"\" >> /tmp/env.txt
+            echo COREIP=\""${SplunkCore.PrivateIp}"\" >> /tmp/env.txt
+            echo COREID=\""${SplunkCore}"\" >> /tmp/env.txt
             curl https://webaccessible-jkuepker.s3.amazonaws.com/phantom-config.sh -o /tmp/phantom-config.sh
             chmod +x /tmp/phantom-config.sh
             /tmp/phantom-config.sh &

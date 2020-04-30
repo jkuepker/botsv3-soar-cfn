@@ -8,10 +8,12 @@ while [[ "$(curl -s -o /dev/null -w "%{http_code}" https://127.0.0.1:8089/servic
 wget "https://webaccessible-jkuepker.s3.amazonaws.com/splunk-app-for-phantom-reporting_100.tgz"
 wget "https://webaccessible-jkuepker.s3.amazonaws.com/phantom-remote-search_1014.tgz"
 wget "https://webaccessible-jkuepker.s3.amazonaws.com/phantom_hec_inputs.conf"
+wget "https://webaccessible-jkuepker.s3.amazonaws.com/user-prefs.conf"
 su splunk -c "tar -zxvf phantom-remote-search_1014.tgz -C /opt/splunk/etc/apps/"
 su splunk -c "tar -zxvf splunk-app-for-phantom-reporting_100.tgz -C /opt/splunk/etc/apps/"
 su splunk -c "mkdir -p /opt/splunk/etc/apps/splunk_httpinput/local"
 su splunk -c "cp phantom_hec_inputs.conf /opt/splunk/etc/apps/splunk_httpinput/local/inputs.conf"
+su splunk -c "cp user-prefs.conf /opt/splunk/etc/system/local/user-prefs.conf"
 wget -nv https://webaccessible-jkuepker.s3.amazonaws.com/botsv3apps.tgz
 tar zxf botsv3apps.tgz
 cd /tmp/botsv3apps

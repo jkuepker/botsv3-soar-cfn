@@ -58,7 +58,7 @@ Resources:
             Owner: '679593333241'
       KeyName: !Ref 'KeyName'
       NetworkInterfaces:
-        - GroupSet:
+        - GroupSet: 
             - !Ref 'CorePhantomSG'
           AssociatePublicIpAddress: 'true'
           DeviceIndex: '0'
