@@ -16,6 +16,8 @@ while [[ "$(curl -s -o /dev/null -w "%{http_code}" https://127.0.0.1/rest/system
 echo "Check for VT API Key and create asset."
 source env.txt
 export $(cut -d= -f1 env.txt)
+echo "Getting instance id"
+iid=$(curl "http://169.254.169.254/latest/meta-data/instance-id")
 echo "Connect Phantom REST API to Splunk for External Search"
 curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"search_settings\": {\"status\": \"Automatic\", \"elastic_search\": {\"enabled\": false}, \"splunk\": {\"local\": {\"enabled\": false}, \"remote\": {\"enabled\": true, \"rest\": {\"use_ssl\": true, \"verify_ssl\": false, \"port\": \"8089\"}, \"host\": \"${COREIP}\", \"user\": {\"search\": {\"username\": \"phantomsearchuser\", \"password\": \"${COREID}\"}, \"delete\": {\"username\": \"phantomdeleteuser\", \"password\": \"${COREID}\"}}, \"hec\": {\"use_ssl\": true, \"token\": \"8106a7ac-7856-4be2-a005-942c82768932\", \"verify_ssl\": false, \"port\": \"8088\"}, \"type\": \"standalone\"}}}}"
 if [[ ! -z "${VT_KEY}" ]]; then
@@ -31,6 +33,13 @@ echo "Generating Events and Artifacts"
 curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/asset/7" -H 'Content-Type: application/json' -d "{\"ingest_now\":true,\"container_source_ids\":\"\",\"max_containers\":${NUMC},\"max_artifacts\":3}"
 echo "TEST - Disabling EULA, adding Company Name, changing Instance Name, configuring FQDN"
 psql -d phantom -c "UPDATE system_settings SET administrator_contact = 'newadmin@localhost', company_name = 'Splunk', system_name = '${INAME}', eula_accepted = true, fqdn = '$(curl -s http://instance-data/latest/meta-data/network/interfaces/macs/$(curl -s http://instance-data/latest/meta-data/network/interfaces/macs)local-ipv4s)' WHERE system_settings.id = 1;"
+echo "Re-indexing events for Phantom Reporting"
+curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"reindex_section\":true,\"reindex_select\":\"actionrun\"}"
+curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"reindex_section\":true,\"reindex_select\":\"app\"}"
+curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"reindex_section\":true,\"reindex_select\":\"artifact\"}"
+curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"reindex_section\":true,\"reindex_select\":\"asset\"}"
+curl -k -u "admin:$(curl 'http://169.254.169.254/latest/meta-data/instance-id')" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"reindex_section\":true,\"reindex_select\":\"container\"}"
+curl -k -u "admin:${iid}" "https://127.0.0.1/rest/system_settings" -H 'Content-Type: application/json' -d "{\"reindex_section\":true,\"reindex_select\":\"playbook\"}"
 echo "Install Completed"
 touch phantom-config-complete
 echo END
