@@ -70,10 +70,9 @@ Resources:
         exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
         echo BEGIN
         date '+%Y-%m-%d %H:%M:%S'
-        instanceid=$(curl http://169.254.169.254/latest/meta-data/instance-id)
-        echo $instanceid > /tmp/test.txt
+        instanceid=$(curl http://instance-data/latest/meta-data/instance-id)
         cd /tmp
-        wget "https://webaccessible-jkuepker.s3.us-east-1.amazonaws.com/splunk-soar-botsv3.sh"
+        wget "https://raw.githubusercontent.com/jkuepker/botsv3-soar-cfn/master/splunk-soar-botsv3.sh"
         chmod +x /tmp/splunk-soar-botsv3.sh
         /tmp/splunk-soar-botsv3.sh &
     Metadata:
@@ -189,7 +188,7 @@ Resources:
             echo NUMC=\""${PhantomNumContainers}"\" >> /tmp/env.txt
             echo COREIP=\""${SplunkCore.PrivateIp}"\" >> /tmp/env.txt
             echo COREID=\""${SplunkCore}"\" >> /tmp/env.txt
-            curl https://webaccessible-jkuepker.s3.amazonaws.com/phantom-config-events.sh -o /tmp/phantom-config-events.sh
+            curl https://raw.githubusercontent.com/jkuepker/botsv3-soar-cfn/master/phantom-config-events.sh -o /tmp/phantom-config-events.sh
             chmod +x /tmp/phantom-config-events.sh
             /tmp/phantom-config-events.sh &
           - Param1: !If
@@ -290,8 +289,7 @@ Parameters:
     Description: The workshop EventID(aka Short Name)
     Type: String
   HostedZone:
-    Default: spl.rocks
-    Description: DNS Domain.
+    Description: DNS domain that you have set as a Route53 Hosted Zone
     Type: String
   AvailabilityZone:
     Description: Availability Zone

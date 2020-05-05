@@ -12,7 +12,7 @@ unzip awscliv2.zip
 ./aws/install
 rm -f awscliv2.zip
 echo "Getting instance id"
-iid=$(curl "http://169.254.169.254/latest/meta-data/instance-id")
+iid=$(curl "http://instance-data/latest/meta-data/instance-id")
 echo "Wait for Phantom REST API to become available."
 while [[ "$(curl -s -o /dev/null -w "%{http_code}" https://127.0.0.1/rest/system_info -k -u "admin:${iid}")" != "200" ]]; do printf "Waiting for Phantom to become available\n"; sleep 30; done
 echo "Check for VT API Key and create asset."
