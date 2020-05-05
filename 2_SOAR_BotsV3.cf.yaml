@@ -195,22 +195,6 @@ Resources:
               - HasVtKey
               - !Ref 'VirusTotalKey'
               - !Ref 'AWS::NoValue'
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          ascending:
-            - config1
-            - config2
-        config1:
-          files:
-            /home/centos/corePrivateIp.txt:
-              content: !GetAtt 'SplunkCore.PrivateIp'
-              mode: '000644'
-              owner: phantom
-        config2:
-          commands:
-            command: cat /tmp/corePrivateIp.txt > /tmp/second.txt
-            ignoreErrors: 'true'
     DependsOn:
       - PublicRoute
   MySecret:
